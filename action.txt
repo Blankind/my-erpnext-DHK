@@ -1,0 +1,219 @@
+
+'use server';
+
+import type { DateRange } from 'react-day-picker';
+import {
+  searchSalesInvoices as searchSalesInvoicesFromApi,
+  fetchSingleSalesInvoice as fetchSingleSalesInvoiceFromApi,
+  fetchGeneralLedger as fetchGeneralLedgerFromApi,
+} from '@/lib/erpnext-api';
+import type { Settings, SalesInvoice, GeneralLedgerEntry } from '@/types';
+import { format } from 'date-fns';
+
+const getFormattedDateRange = (dateRange: DateRange) => {
+  if (!dateRange || !dateRange.from) {
+    // Return a default or handle the error appropriately
+    const today = new Date();
+    return {
+      from: `${format(today, 'yyyy-MM-dd')} 00:00:00+07:00`,
+      to: `${format(today, 'yyyy-MM-dd')} 23:59:59+07:00`,
+    };
+  }
+
+  const fromDate = dateRange.from;
+  const toDate = dateRange.to || dateRange.from;
+
+  // Manually construct ISO string with Jakarta's timezone offset
+  const from = `${format(fromDate, 'yyyy-MM-dd')} 00:00:00+07:00`;
+  const to = `${format(toDate, 'yyyy-MM-dd')} 23:59:59+07:00`;
+
+  return { from, to };
+};
+
+export async function getGeneralLedgerData(
+  settings: Settings,
+  dateRange: DateRange
+): Promise<{ dhk: GeneralLedgerEntry[]; toko88: GeneralLedgerEntry[] }> {
+  const { from, to } = getFormattedDateRange(dateRange);
+
+  try {
+    const [dhkData, toko88Data] = await Promise.all([
+      fetchGeneralLedgerFromApi('DHK', settings.dhk, from, to),
+      fetchGeneralLedgerFromApi('TOKO88', settings.toko88, from, to),
+    ]);
+    return { dhk: dhkData, toko88: toko88Data };
+  } catch (err: any) {
+    console.error('Server action error fetching General Ledger:', err);
+    throw new Error(err.message || 'Gagal mengambil data General Ledger.');
+  }
+}
+
+export async function searchInvoices(settings: Settings, invoiceNumber: string): Promise<SalesInvoice[]> {
+  if (!invoiceNumber) {
+    throw new Error('Nomor invoice tidak boleh kosong.');
+  }
+
+  try {
+    const dhkInvoices = await searchSalesInvoicesFromApi('DHK', settings.dhk, invoiceNumber);
+    return dhkInvoices;
+  } catch (err: any)
+   {
+    console.error(`Server action error finding Sales Invoice ${invoiceNumber}:`, err);
+    throw new Error(err.message || `Gagal mencari Sales Invoice ${invoiceNumber}.`);
+  }
+}
+
+export async function getInvoiceDetails(settings: Settings, instance: string, invoiceName: string): Promise<SalesInvoice | null> {
+    if (!instance || !invoiceName) {
+        throw new Error('Instance dan nama invoice diperlukan.');
+    }
+
+    try {
+        const connection = instance === 'DHK' ? settings.dhk : settings.toko88;
+        const invoice = await fetchSingleSalesInvoiceFromApi(instance, connection, invoiceName);
+        return invoice;
+    } catch (err: any) {
+        console.error(`Server action error getting details for ${invoiceName}:`, err);
+         if (err.message.includes('404')) return null;
+        throw new Error(err.message || `Gagal mengambil detail untuk invoice ${invoiceName}.`);
+    }
+}
+
+interface FakturData {
+  invoice: SalesInvoice;
+  fakturInfo: {
+    tin: string;
+    trxCode: string;
+    taxInvoiceOpt: string;
+    vatRate: number;
+    stlgRate: number;
+  };
+}
+
+// New function to generate the complex XML structure for CoreTax
+export async function generateFakturPajakXml(data: FakturData): Promise<string> {
+  const { invoice, fakturInfo } = data;
+
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), 'yyyy-MM-dd');
+  };
+
+  const formatNumber = (num: number, decimalPlaces = 2) => {
+    return num.toFixed(decimalPlaces);
+  };
+  
+  const cleanTin = (tin: string = '') => tin.replace(/[^0-9]/g, '');
+
+  const unitMap: { [key: string]: string } = {
+    'kg': 'UM.0003',
+    'gram': 'UM.0004',
+    'karat': 'UM.0005',
+    'metrik ton': 'UM.0001',
+    'wet ton': 'UM.0002',
+    'kiloliter': 'UM.0006',
+    'l': 'UM.0007',
+    'barrel': 'UM.0008',
+    'mmbtu': 'UM.0009',
+    'ampere': 'UM.0010',
+    'sentimeter kubik': 'UM.0011',
+    'm2': 'UM.0012',
+    'ml': 'UM.0013',
+    'inches': 'UM.0014',
+    'sentimeter': 'UM.0015',
+    'yard': 'UM.0016',
+    'lusin': 'UM.0017',
+    'unit': 'UM.0018',
+    'set': 'UM.0019',
+    'lbr': 'UM.0020',
+    'lembar': 'UM.0020',
+    'piece': 'UM.0021',
+    'pcs': 'UM.0021',
+    'boks': 'UM.0022',
+    'tahun': 'UM.0023',
+    'bulan': 'UM.0024',
+    'minggu': 'UM.0025',
+    'hari': 'UM.0026',
+    'jam': 'UM.0027',
+    'menit': 'UM.0028',
+    'persen': 'UM.0029',
+    'kegiatan': 'UM.0030',
+    'laporan': 'UM.0031',
+    'bahan': 'UM.0032',
+    'lainnya': 'UM.0033',
+  };
+
+  const getUnitCode = (unit: string | null | undefined): string => {
+    if (!unit) return 'UM.0018'; // Default to "Unit" if empty, null, or undefined
+    const lowercasedUnit = unit.toLowerCase().trim();
+    return unitMap[lowercasedUnit] || 'UM.0018'; // Return mapped code or default to "Unit" if not found
+  };
+
+
+  const sellerTIN = cleanTin(fakturInfo.tin);
+  const buyerTIN = cleanTin(invoice.npwp_or_nik);
+
+  const itemsXml = invoice.items.map((item: any) => {
+    // Price is the unit rate before VAT. ERPNext 'rate' includes VAT.
+    const price = item.rate / 1.11;
+
+    // TaxBase in XML is the total price for the line item BEFORE any discounts (Price * Qty).
+    const taxBase = price * item.qty;
+
+    // Calculate discount per item from the invoice's overall percentage discount.
+    // This discount is applied to the pre-VAT taxBase.
+    const discount = (taxBase * (invoice.additional_discount_percentage || 0)) / 100;
+    // OtherTaxBase is the DPP for the line item after discount. This is the value upon which tax is calculated.
+    const otherTaxBase = taxBase - discount;
+    const vat = otherTaxBase * (fakturInfo.vatRate / 100);
+    const stlg = otherTaxBase * (fakturInfo.stlgRate / 100);
+    const unitCode = getUnitCode(item.uom);
+
+    return `
+        <GoodService>
+          <Opt>A</Opt>
+          <Code>000000</Code>
+          <Name>${item.item_name}</Name>
+          <Unit>${unitCode}</Unit>
+          <Price>${formatNumber(price, 2)}</Price>
+          <Qty>${item.qty}</Qty>
+          <TotalDiscount>${formatNumber(discount, 2)}</TotalDiscount>
+          <TaxBase>${formatNumber(taxBase, 2)}</TaxBase>
+          <OtherTaxBase>${formatNumber(otherTaxBase, 2)}</OtherTaxBase>
+          <VATRate>${fakturInfo.vatRate}</VATRate>
+          <VAT>${formatNumber(vat, 0)}</VAT>
+          <STLGRate>${fakturInfo.stlgRate}</STLGRate>
+          <STLG>${formatNumber(stlg, 2)}</STLG>
+        </GoodService>`;
+  }).join('');
+
+  const xmlString = `
+<TaxInvoiceBulk xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <TIN>${sellerTIN}</TIN>
+  <ListOfTaxInvoice>
+    <TaxInvoice>
+      <TaxInvoiceDate>${formatDate(invoice.posting_date)}</TaxInvoiceDate>
+      <TaxInvoiceOpt>${fakturInfo.taxInvoiceOpt}</TaxInvoiceOpt>
+      <TrxCode>${fakturInfo.trxCode}</TrxCode>
+      <AddInfo/>
+      <CustomDoc/>
+      <CustomDocMonthYear/>
+      <RefDesc/>
+      <FacilityStamp/>
+      <SellerIDTKU>${sellerTIN}000000</SellerIDTKU>
+      <BuyerTin>${buyerTIN}</BuyerTin>
+      <BuyerDocument>TIN</BuyerDocument>
+      <BuyerCountry>IDN</BuyerCountry>
+      <BuyerDocumentNumber>-</BuyerDocumentNumber>
+      <BuyerName>${invoice.customer_name}</BuyerName>
+      <BuyerAdress>${invoice.customer_address || ''}</BuyerAdress>
+      <BuyerEmail/>
+      <BuyerIDTKU>${buyerTIN}000000</BuyerIDTKU>
+      <ListOfGoodService>${itemsXml}
+      </ListOfGoodService>
+    </TaxInvoice>
+  </ListOfTaxInvoice>
+</TaxInvoiceBulk>
+  `.trim();
+
+  return `<?xml version="1.0" encoding="utf-8"?>\n${xmlString}`;
+}
