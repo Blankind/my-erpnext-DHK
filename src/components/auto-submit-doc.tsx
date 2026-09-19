@@ -55,10 +55,10 @@ const DN_SERIES = [
 ];
 
 const defaultSettings: Settings = {
-  DHK: {
-    url:    process.env.NEXT_PUBLIC_DHK_URL    || "https://dehikas2.digitalasiasolusindo.com",
-    key:    process.env.NEXT_PUBLIC_DHK_KEY    || "",
-    secret: process.env.NEXT_PUBLIC_DHK_SECRET || "",
+  DHK: { 
+    url: 'https://dehikas2.digitalasiasolusindo.com', 
+    key: '57d7aaf633158d0', 
+    secret: '3d64051fcef8a3f' 
   },
   TOKO88: {
     url:    process.env.NEXT_PUBLIC_TOKO88_URL    || "https://toko88.digitalasiasolusindo.com",
