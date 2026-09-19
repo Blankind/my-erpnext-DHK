@@ -12,23 +12,25 @@ import {
   Pencil,
   Trash2,
   ClipboardList,
-  BarChart3
+  BarChart3,
+  FileCheck2,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
 export default function WelcomePage() {
   const modules = [
-    { title: "Stock Opname", desc: "Reconcile physical vs system stock", icon: Archive, href: "/stock-opname", color: "text-blue-500", bgColor: "bg-blue-50" },
-    { title: "Check LCV", desc: "Analyze unit HPP from landed costs", icon: BarChart3, href: "/check-lcv", color: "text-indigo-500", bgColor: "bg-indigo-50" },
-    { title: "Check Stock", desc: "Fetch stock levels from Excel", icon: PackageSearch, href: "/check-stock", color: "text-emerald-500", bgColor: "bg-emerald-50" },
-    { title: "Real-Time Stock", desc: "Search live stock and pricing", icon: Activity, href: "/real-time-stock", color: "text-green-500", bgColor: "bg-green-50" },
-    { title: "Attendance Recap", desc: "Process employee attendance records", icon: ClipboardList, href: "/attendance-summary", color: "text-cyan-500", bgColor: "bg-cyan-50" },
-    { title: "Toggle Master", desc: "Enable or disable master records", icon: SlidersHorizontal, href: "/master-data-toggle", color: "text-amber-500", bgColor: "bg-amber-50" },
-    { title: "Create Item", desc: "Add new master data with prices", icon: PackagePlus, href: "/create-item", color: "text-purple-500", bgColor: "bg-purple-50" },
-    { title: "Update Item", desc: "Bulk update item details", icon: Pencil, href: "/update-item", color: "text-rose-500", bgColor: "bg-rose-50" },
-    { title: "Update Price", desc: "Bulk update item prices", icon: TrendingUp, href: "/update-price", color: "text-orange-500", bgColor: "bg-orange-50" },
-    { title: "Delete Price", desc: "Permanently delete price IDs", icon: Trash2, href: "/delete-item-price", color: "text-destructive", bgColor: "bg-destructive/10" },
+    { title: "Stock Opname",     desc: "Reconcile physical vs system stock",      icon: Archive,       href: "/stock-opname",        color: "text-blue-500",        bgColor: "bg-blue-50" },
+    { title: "Check LCV",        desc: "Analyze unit HPP from landed costs",       icon: BarChart3,     href: "/check-lcv",           color: "text-indigo-500",      bgColor: "bg-indigo-50" },
+    { title: "Check Stock",      desc: "Fetch stock levels from Excel",            icon: PackageSearch, href: "/check-stock",         color: "text-emerald-500",     bgColor: "bg-emerald-50" },
+    { title: "Real-Time Stock",  desc: "Search live stock and pricing",            icon: Activity,      href: "/real-time-stock",     color: "text-green-500",       bgColor: "bg-green-50" },
+    { title: "Attendance Recap", desc: "Process employee attendance records",      icon: ClipboardList, href: "/attendance-summary",  color: "text-cyan-500",        bgColor: "bg-cyan-50" },
+    { title: "Toggle Master",    desc: "Enable or disable master records",         icon: SlidersHorizontal, href: "/master-data-toggle", color: "text-amber-500",   bgColor: "bg-amber-50" },
+    { title: "Create Item",      desc: "Add new master data with prices",          icon: PackagePlus,   href: "/create-item",         color: "text-purple-500",      bgColor: "bg-purple-50" },
+    { title: "Update Item",      desc: "Bulk update item details",                 icon: Pencil,        href: "/update-item",         color: "text-rose-500",        bgColor: "bg-rose-50" },
+    { title: "Update Price",     desc: "Bulk update item prices",                  icon: TrendingUp,    href: "/update-price",        color: "text-orange-500",      bgColor: "bg-orange-50" },
+    { title: "Delete Price",     desc: "Permanently delete price IDs",             icon: Trash2,        href: "/delete-item-price",   color: "text-destructive",     bgColor: "bg-destructive/10" },
+    { title: "Auto Submit",      desc: "Submit PREC & DN documents in bulk",       icon: FileCheck2,    href: "/auto-submit",         color: "text-teal-500",        bgColor: "bg-teal-50" },
   ];
 
   return (
