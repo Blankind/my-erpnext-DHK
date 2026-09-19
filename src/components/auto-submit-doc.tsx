@@ -56,7 +56,7 @@ const DN_SERIES = [
 
 const defaultSettings: Settings = {
   DHK: {
-    url:    process.env.NEXT_PUBLIC_DHK_URL    || "https://dehikas.digitalasiasolusindo.com",
+    url:    process.env.NEXT_PUBLIC_DHK_URL    || "https://dehikas2.digitalasiasolusindo.com",
     key:    process.env.NEXT_PUBLIC_DHK_KEY    || "",
     secret: process.env.NEXT_PUBLIC_DHK_SECRET || "",
   },
