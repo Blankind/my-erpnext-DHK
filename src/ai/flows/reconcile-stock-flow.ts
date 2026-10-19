@@ -52,10 +52,13 @@ const WAREHOUSE_MAP: Record<string, { DHK: string }> = {
     "LAMONGAN": { DHK: "LAMONGAN - PD" },
     "BANGIL":   { DHK: "BANGIL - PD" },
     "KREMBUNG": { DHK: "KREMBUNG - PD" },
+    "TRANSIT":  { DHK: "Transit - PD" },
 };
 
 function getMappedWarehouse(originalWarehouse: string, erp: 'DHK'): string {
-    return WAREHOUSE_MAP[originalWarehouse]?.[erp] || originalWarehouse;
+    // Case-insensitive + trim: "Transit", "TRANSIT", " transit " -> "Transit - PD"
+    const key = originalWarehouse.trim().toUpperCase();
+    return WAREHOUSE_MAP[key]?.[erp] || originalWarehouse;
 }
 
 export async function reconcileStock(input: ReconcileStockInput): Promise<ReconcileStockOutput> {
